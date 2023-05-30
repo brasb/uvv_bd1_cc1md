@@ -11,7 +11,10 @@ DROP DATABASE IF EXISTS uvv;
 DROP USER IF EXISTS bras;
 CREATE ROLE bras WITH CREATEDB CREATEROLE LOGIN PASSWORD '123';
 
+-- Cria o banco de ddados 'uvv'.
 CREATE DATABASE uvv OWNER bras;
+
+-- Conecta ao banco de dados com o usuário correto.
 \c 'user=bras password=123 dbname=uvv'
 
 -- Criação do schema. 
@@ -47,7 +50,7 @@ COMMENT ON COLUMN lojas.produtos.imagem_ultima_atualizacao IS 'Informa quando a 
 
 -- Garante que o produto não vai ser gratuito (com preço igual a 0) e que o preço vai ser positivo.
 ALTER TABLE lojas.produtos
-ADD CONSTRAINT cc_preco_unitario_valido
+ADD CONSTRAINT cc_preco_unitario_positivo
 CHECK (preco_unitario > 0);
 
 -- Garante que a última atualização não ocorreu no futuro.
@@ -91,15 +94,15 @@ CHECK (email like '%@%');
     Exemplo: '+55 (27) 3224-5678'.
 */
 ALTER TABLE lojas.clientes
-ADD CONSTRAINT cc_caracteres_telefone_1
+ADD CONSTRAINT cc_caracteres_validos_telefone1
 CHECK (telefone1 ~ '0-9+ \-\(\)');
 
 ALTER TABLE lojas.clientes
-ADD CONSTRAINT cc_caracteres_telefone_2
+ADD CONSTRAINT cc_caracteres_validos_telefone2
 CHECK (telefone2 ~ '0-9+ \-\(\)');
 
 ALTER TABLE lojas.clientes
-ADD CONSTRAINT cc_caracteres_telefone_3
+ADD CONSTRAINT cc_caracteres_validos_telefone3
 CHECK (telefone3 ~ '0-9+ \-\(\)');
 
 
@@ -148,7 +151,7 @@ CHECK (logo_ultima_atualizacao <= CURRENT_DATE);
 
 -- Garante que a loja tem pelo menos um endereço (seja web ou físico).
 ALTER TABLE lojas.lojas
-ADD CONSTRAINT cc_checar_existencia_enderecos
+ADD CONSTRAINT cc_existencia_pelo_menos_um_endereco
 CHECK (not (endereco_web IS NULL AND endereco_fisico IS NULL));
 
 CREATE TABLE lojas.envios (
@@ -187,6 +190,11 @@ COMMENT ON COLUMN lojas.estoques.loja_id IS 'Informa o ID do loja dona do estoqu
 COMMENT ON COLUMN lojas.estoques.produto_id IS 'Indentificação do produto que está sendo estocado.';
 COMMENT ON COLUMN lojas.estoques.quantidade IS 'Informa a quantidade de produtos no estoque.';
 
+-- Garante que a quantidade do estoque não é negativa.
+ALTER TABLE lojas.estoques
+ADD CONSTRAINT cc_estoque_nao_negativo
+CHECK (quantidade >= 0);
+
 
 CREATE TABLE lojas.pedidos (
                 pedido_id  NUMERIC(38) NOT NULL,
@@ -204,6 +212,11 @@ COMMENT ON COLUMN lojas.pedidos.cliente_id IS 'ID do cliente que fez o pedido.';
 COMMENT ON COLUMN lojas.pedidos.status IS 'Status do pedido.';
 COMMENT ON COLUMN lojas.pedidos.loja_id IS 'Identifica a loja do pedido.';
 
+-- Garante que o pedido não foi feito no futuro.
+ALTER TABLE lojas.pedidos
+ADD CONSTRAINT cc_data_hora_no_presente_ou_passado
+CHECK (data_hora <= now());
+
 -- Checa se o status tem um dos valores válidos.
 ALTER TABLE lojas.pedidos
 ADD CONSTRAINT cc_validade_status_pedidos
@@ -214,7 +227,7 @@ CREATE TABLE lojas.pedidos_itens (
                 pedido_id       NUMERIC(38)   NOT NULL,
                 produto_id      NUMERIC(38)   NOT NULL,
                 numero_da_linha NUMERIC(38)   NOT NULL,
-                preco_unitario  NUMERIC(10,2) NOT NULL,
+                preco_unitario  NUMERIC(10, 2) NOT NULL,
                 quantidade      NUMERIC(38)   NOT NULL,
                 envio_id        NUMERIC(38),
                 CONSTRAINT pedido_id__produto_id PRIMARY KEY (pedido_id, produto_id)
@@ -228,10 +241,16 @@ COMMENT ON COLUMN lojas.pedidos_itens.preco_unitario IS 'Informa o preço unitá
 COMMENT ON COLUMN lojas.pedidos_itens.quantidade IS 'Informa a quantidade de produtos do pedido.';
 COMMENT ON COLUMN lojas.pedidos_itens.envio_id IS 'Informa a indentificação do envio do pedido.';
 
+-- Garante que o produto não vai ser gratuito (com preço igual a 0) e que o preço vai ser positivo.
+ALTER TABLE lojas.pedidos_itens
+ADD CONSTRAINT cc_pedidos_itens_preco_unitario_valido
+CHECK (preco_unitario > 0);
 
+-- Garante que a quantidade de itens sendo pedidos não é zero.
 ALTER TABLE lojas.pedidos_itens
 ADD CONSTRAINT cc_quantidade_itens_positiva
-CHECK (quantidade >= 0);
+CHECK (quantidade > 0);
+
 
 -- Relações entre as tabelas.
 ALTER TABLE lojas.pedidos_itens ADD CONSTRAINT produtos_pedidos_itens_fk

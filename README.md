@@ -7,5 +7,5 @@ de Banco de Dados.
 
 ## Subpasta(s)
 
-* (pset1/)[pset1/] - contém os arquivos referentes ao primeiro problem set.
+* [pset1/](pset1/) - contém os arquivos referentes ao primeiro problem set.
 
